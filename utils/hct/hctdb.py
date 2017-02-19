@@ -1212,6 +1212,8 @@ class db_dxil(object):
         add_pass('constmerge', 'ConstantMerge', 'Merge Duplicate Global Constants', [])
         add_pass('lowerbitsets', 'LowerBitSets', 'Lower bitset metadata', [
             {'n':'lowerbitsets-avoid-reuse', 'i':'AvoidReuse', 't':'bool', 'd':'Try to avoid reuse of byte array addresses using aliases'}])
+        add_pass('red', "ReducibilityAnalysis", 'Reducibility Analysis', [
+            {'n':'Action', 't':'IrreducibilityAction', 'c':1, 'd':'Print, ignore or throw if irreducible'}])
         # TODO: turn STATISTICS macros into ETW events
         # assert no duplicate names
         self.pass_idx_args = set()

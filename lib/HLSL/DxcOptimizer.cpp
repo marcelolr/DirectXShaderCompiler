@@ -109,6 +109,7 @@ HRESULT SetupRegistryPassForHLSL() {
     initializePromotePassPass(Registry);
     initializePruneEHPass(Registry);
     initializeReassociatePass(Registry);
+    initializeReducibilityAnalysisPass(Registry);
     initializeRegToMemHlslPass(Registry);
     initializeRewriteSymbolsPass(Registry);
     initializeSCCPPass(Registry);
@@ -157,6 +158,7 @@ static ArrayRef<LPCSTR> GetPassArgNames(LPCSTR passName) {
   static const LPCSTR LowerBitSetsArgs[] = { "lowerbitsets-avoid-reuse" };
   static const LPCSTR LowerExpectIntrinsicArgs[] = { "likely-branch-weight", "unlikely-branch-weight" };
   static const LPCSTR MergeFunctionsArgs[] = { "mergefunc-sanity" };
+  static const LPCSTR ReducibilityAnalysisArgs[] = { "Action" };
   static const LPCSTR RewriteSymbolsArgs[] = { "DL", "rewrite-map-file" };
   static const LPCSTR SROAArgs[] = { "RequiresDomTree", "force-ssa-updater", "sroa-random-shuffle-slices", "sroa-strict-inbounds" };
   static const LPCSTR SROA_DTArgs[] = { "Threshold", "StructMemberThreshold", "ArrayElementThreshold", "ScalarLoadThreshold" };
@@ -186,6 +188,7 @@ static ArrayRef<LPCSTR> GetPassArgNames(LPCSTR passName) {
   if (strcmp(passName, "lowerbitsets") == 0) return ArrayRef<LPCSTR>(LowerBitSetsArgs, _countof(LowerBitSetsArgs));
   if (strcmp(passName, "lower-expect") == 0) return ArrayRef<LPCSTR>(LowerExpectIntrinsicArgs, _countof(LowerExpectIntrinsicArgs));
   if (strcmp(passName, "mergefunc") == 0) return ArrayRef<LPCSTR>(MergeFunctionsArgs, _countof(MergeFunctionsArgs));
+  if (strcmp(passName, "red") == 0) return ArrayRef<LPCSTR>(ReducibilityAnalysisArgs, _countof(ReducibilityAnalysisArgs));
   if (strcmp(passName, "rewrite-symbols") == 0) return ArrayRef<LPCSTR>(RewriteSymbolsArgs, _countof(RewriteSymbolsArgs));
   if (strcmp(passName, "sroa") == 0) return ArrayRef<LPCSTR>(SROAArgs, _countof(SROAArgs));
   if (strcmp(passName, "scalarrepl") == 0) return ArrayRef<LPCSTR>(SROA_DTArgs, _countof(SROA_DTArgs));
@@ -222,6 +225,7 @@ static ArrayRef<LPCSTR> GetPassArgDescriptions(LPCSTR passName) {
   static const LPCSTR LowerBitSetsArgs[] = { "Try to avoid reuse of byte array addresses using aliases" };
   static const LPCSTR LowerExpectIntrinsicArgs[] = { "Weight of the branch likely to be taken (default = 64)", "Weight of the branch unlikely to be taken (default = 4)" };
   static const LPCSTR MergeFunctionsArgs[] = { "How many functions in module could be used for MergeFunctions pass sanity check. '0' disables this check. Works only with '-debug' key." };
+  static const LPCSTR ReducibilityAnalysisArgs[] = { "Print, ignore or throw if irreducible" };
   static const LPCSTR RewriteSymbolsArgs[] = { "None", "None" };
   static const LPCSTR SROAArgs[] = { "None", "Force the pass to not use DomTree and mem2reg, insteadforming SSA values through the SSAUpdater infrastructure.", "Enable randomly shuffling the slices to help uncover instability in their order.", "Experiment with completely strict handling of inbounds GEPs." };
   static const LPCSTR SROA_DTArgs[] = { "None", "None", "None", "None" };
@@ -251,6 +255,7 @@ static ArrayRef<LPCSTR> GetPassArgDescriptions(LPCSTR passName) {
   if (strcmp(passName, "lowerbitsets") == 0) return ArrayRef<LPCSTR>(LowerBitSetsArgs, _countof(LowerBitSetsArgs));
   if (strcmp(passName, "lower-expect") == 0) return ArrayRef<LPCSTR>(LowerExpectIntrinsicArgs, _countof(LowerExpectIntrinsicArgs));
   if (strcmp(passName, "mergefunc") == 0) return ArrayRef<LPCSTR>(MergeFunctionsArgs, _countof(MergeFunctionsArgs));
+  if (strcmp(passName, "red") == 0) return ArrayRef<LPCSTR>(ReducibilityAnalysisArgs, _countof(ReducibilityAnalysisArgs));
   if (strcmp(passName, "rewrite-symbols") == 0) return ArrayRef<LPCSTR>(RewriteSymbolsArgs, _countof(RewriteSymbolsArgs));
   if (strcmp(passName, "sroa") == 0) return ArrayRef<LPCSTR>(SROAArgs, _countof(SROAArgs));
   if (strcmp(passName, "scalarrepl") == 0) return ArrayRef<LPCSTR>(SROA_DTArgs, _countof(SROA_DTArgs));
@@ -301,6 +306,7 @@ static bool IsPassOptionName(StringRef S) {
     ||  S.equals("unroll-max-iteration-count-to-analyze")
     ||  S.equals("TLIImpl")
     ||  S.equals("rotation-max-header-size")
+    ||  S.equals("Action")
     ||  S.equals("enable-load-pre")
     ||  S.equals("rewrite-map-file")
     ||  S.equals("jump-threading-threshold")
