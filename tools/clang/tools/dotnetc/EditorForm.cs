@@ -1529,7 +1529,7 @@ namespace MainNs
                     if (text[result] == close) level--;
                     result++;
                 }
-                return (result == end) ? -1 : result;
+                return (level != 0) ? -1 : result;
             }
         }
 
@@ -1553,6 +1553,12 @@ namespace MainNs
 
             public static IEnumerable<string> DotFileNameCandidates()
             {
+                string vizDot = "Graphviz2.38\\bin\\dot.exe";
+                // Start by looking at a local copy.
+                yield return System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(typeof(Program).Assembly.Location), vizDot);
+                yield return System.IO.Path.Combine(Environment.CurrentDirectory, vizDot);
+
                 // Look in a few known places.
                 string path = Environment.GetEnvironmentVariable("PATH");
                 string[] partPaths = path.Split(';');
@@ -1564,11 +1570,11 @@ namespace MainNs
                 string progPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
                 if (!String.IsNullOrEmpty(progPath))
                 {
-                    yield return System.IO.Path.Combine(progPath, "Graphviz2.38\\bin\\dot.exe");
+                    yield return System.IO.Path.Combine(progPath, vizDot);
                 }
 
                 progPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-                yield return System.IO.Path.Combine(progPath, "Graphviz2.38\\bin\\dot.exe");
+                yield return System.IO.Path.Combine(progPath, vizDot);
             }
 
             public static string FindDotFileName()
