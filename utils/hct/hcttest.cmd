@@ -7,9 +7,12 @@ rem Verifier tests also run because they are included in the general TEST_CLANG 
 set TEST_CLEAN=0
 set TEST_CLANG=1
 set TEST_EXEC=1
+set TEST_CLANG_SELECT=/select:"@Priority<1"
 set TEST_CLANG_VERIF=0
 set TEST_EXTRAS=1
-set BUILD_CONFIG=Debug
+if "%BUILD_CONFIG%"=="" (
+  set BUILD_CONFIG=Debug
+)
 
 if "%1"=="clean" (
   set TEST_CLEAN=1
@@ -17,6 +20,11 @@ if "%1"=="clean" (
   set TEST_EXEC=0
   set TEST_CLANG_VERIF=0
   set TEST_EXTRAS=0
+  shift /1
+)
+
+if "%1"=="all" (
+  set TEST_CLANG_SELECT=
   shift /1
 )
 
@@ -72,7 +80,9 @@ if "%1"=="-x86" (
 shift /1
 :donearch
 
-set TEST_DIR=%HLSL_BLD_DIR%\%BUILD_CONFIG%\test
+if "%TEST_DIR%"=="" (
+  set TEST_DIR=%HLSL_BLD_DIR%\%BUILD_CONFIG%\test
+)
 
 if "%1"=="/?" goto :showhelp
 if "%1"=="-?" goto :showhelp
@@ -85,21 +95,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set TEST_DIR=%HLSL_BLD_DIR%\%BUILD_CONFIG%\test
 if exist %TEST_DIR% (
   echo Cleaning %TEST_DIR% ...
   rmdir /q /s %TEST_DIR%
 )
-if not exist %TEST_DIR%\. (mkdir %TEST_DIR%)
-
 if "%TEST_CLEAN%"=="1" (
-  echo Cleaning %TEST_DIR% ...
-  rmdir /q /s %TEST_DIR%
+  rem If this is all we do, our work is done.
   exit /b 0
 )
+if not exist %TEST_DIR%\. (mkdir %TEST_DIR%)
 
 echo Copying binaries to test to %TEST_DIR%:
-robocopy %HLSL_BLD_DIR%\%BUILD_CONFIG%\bin %TEST_DIR% *.exe *.dll
+robocopy %HLSL_BLD_DIR%\%BUILD_CONFIG%\bin %TEST_DIR% *.exe *.dll /NS /NC /NFL /NP /NJH /NJS
 
 echo Running HLSL tests ...
 
@@ -113,7 +120,7 @@ if exist "%HCT_EXTRAS%\hcttest-before.cmd" (
 
 if "%TEST_CLANG%"=="1" (
   echo Running Clang unit tests ...
-  call :runte clang-hlsl-tests.dll /p:"HlslDataDir=%HLSL_SRC_DIR%\tools\clang\test\HLSL" /select: "@Priority<1"
+  call :runte clang-hlsl-tests.dll /p:"HlslDataDir=%HLSL_SRC_DIR%\tools\clang\test\HLSL" %TEST_CLANG_SELECT%
   if errorlevel 1 (
     exit /b 1
   )
@@ -179,8 +186,9 @@ echo   hcttest [target]
 echo.
 echo target can be empty or a specific subset.
 echo.
-echo If target if not specified, all tests will be run.
+echo If target if not specified, all default priority tests will be run.
 echo.
+echo 'all' will run all tests regardless of priority.
 echo 'clang' will only run clang tests.
 echo 'exec' will only run execution tests.
 echo 'v' will run the clang tests that are verified-based.

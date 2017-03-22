@@ -84,6 +84,16 @@ using namespace llvm;
 using namespace clang;
 using namespace hlsl;
 
+// DXTRACE_FMT_APIFS is used by the API-based virtual filesystem. There's little
+// value in providing a generalization for this kind of purely-debugger-based
+// tracing at this point at the project level; there are a number of mechanisms
+// already in place.
+#if 0
+#define DXTRACE_FMT_APIFS(fmt, ...) OutputDebugFormatA(fmt, __VA_ARGS__)
+#else
+#define DXTRACE_FMT_APIFS(...)
+#endif
+
 // This declaration is used for the locally-linked validator.
 HRESULT CreateDxcValidator(_In_ REFIID riid, _Out_ LPVOID *ppv);
 
