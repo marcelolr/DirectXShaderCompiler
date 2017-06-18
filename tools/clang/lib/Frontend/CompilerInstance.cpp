@@ -203,6 +203,7 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
                                     bool ShouldOwnClient,
                                     const CodeGenOptions *CodeGenOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  DiagID->setFileNotFoundFatal(Opts->FileNotFoundFatal);
   IntrusiveRefCntPtr<DiagnosticsEngine>
       Diags(new DiagnosticsEngine(DiagID, Opts));
 

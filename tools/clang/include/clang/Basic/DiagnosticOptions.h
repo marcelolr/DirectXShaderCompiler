@@ -96,6 +96,8 @@ public:
   /// prefixes removed.
   std::vector<std::string> Remarks;
 
+  bool FileNotFoundFatal = false; // HLSL Change
+
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.
 #define DIAGOPT(Name, Bits, Default)

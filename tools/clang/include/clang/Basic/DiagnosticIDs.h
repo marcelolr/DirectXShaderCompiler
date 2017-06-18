@@ -123,10 +123,13 @@ public:
 private:
   /// \brief Information for uniquing and looking up custom diags.
   diag::CustomDiagInfo *CustomDiagInfo;
+  unsigned FileNotFoundFatal : 1; // HLSL Change - handy to set while editin
 
 public:
   DiagnosticIDs();
   ~DiagnosticIDs();
+
+  void setFileNotFoundFatal(bool V) { FileNotFoundFatal = V ? 1 : 0; }
 
   /// \brief Return an ID for a diagnostic with the specified format string and
   /// level.

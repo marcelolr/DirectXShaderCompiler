@@ -3059,8 +3059,10 @@ static void clang_parseTranslationUnit_Impl(void *UserData) {
   bool ForSerialization = options & CXTranslationUnit_ForSerialization;
 
   // Configure the diagnostics.
+  DiagnosticOptions *DO = new DiagnosticOptions;
+  DO->FileNotFoundFatal = false;
   IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
+    Diags(CompilerInstance::createDiagnostics(DO));
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,

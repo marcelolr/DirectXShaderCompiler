@@ -300,7 +300,10 @@ namespace clang {
 // Common Diagnostic implementation
 //===----------------------------------------------------------------------===//
 
-DiagnosticIDs::DiagnosticIDs() { CustomDiagInfo = nullptr; }
+DiagnosticIDs::DiagnosticIDs() {
+  CustomDiagInfo = nullptr;
+  FileNotFoundFatal = 0; // HLSL Change
+}
 
 DiagnosticIDs::~DiagnosticIDs() {
   delete CustomDiagInfo;
@@ -423,8 +426,13 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   DiagnosticMapping &Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
   // TODO: Can a null severity really get here?
-  if (Mapping.getSeverity() != diag::Severity())
+  if (Mapping.getSeverity() != diag::Severity()) {
     Result = Mapping.getSeverity();
+    // HLSL Change Starts
+    if (DiagID == diag::err_pp_file_not_found && FileNotFoundFatal)
+      Result = diag::Severity::Error;
+    // HLSL Change Ends
+  }
 
   // Upgrade ignored diagnostics if -Weverything is enabled.
   if (Diag.EnableAllWarnings && Result == diag::Severity::Ignored &&
