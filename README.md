@@ -28,6 +28,8 @@ As an example of community contribution, this project can also target the [SPIR-
 
 ## Building Sources
 
+Note: Instead of building manually, you can download the artifacts built by Appveyor for the latest master branch at [here](https://ci.appveyor.com/project/marcelolr/directxshadercompiler/branch/master/artifacts).
+
 Before you build, you will need to have some additional software installed. This is the most straightforward path - see [Building Sources](https://github.com/Microsoft/DirectXShaderCompiler/wiki/Building-Sources) on the Wiki for more options, including Visual Studio 2015 and Ninja support.
 
 * [Git](http://git-scm.com/downloads).
