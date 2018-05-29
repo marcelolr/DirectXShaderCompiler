@@ -185,6 +185,8 @@ public:
   LPCSTR GS = nullptr, DS = nullptr, HS = nullptr;
   UINT DispatchX = 1, DispatchY = 1, DispatchZ = 1;
   D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  D3D12_RASTERIZER_DESC RasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  D3D12_VIEWPORT Viewport = {0};
 
   UINT SampleMask = UINT_MAX; // TODO: parse from file
   DXGI_FORMAT RTVFormats[8]; // TODO: parse from file

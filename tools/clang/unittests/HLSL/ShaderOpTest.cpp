@@ -442,7 +442,7 @@ void ShaderOpTest::CreatePipelineState() {
       GDesc.RTVFormats[i] = R->Desc.Format;
     }
     GDesc.SampleDesc.Count = 1; // TODO: read from file, set from shader operation; also apply to count
-    GDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); // TODO: read from file, set from op
+    GDesc.RasterizerState = m_pShaderOp->RasterizerDesc;
     GDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT); // TODO: read from file, set from op
 
     // TODO: pending values to set
@@ -782,10 +782,12 @@ void ShaderOpTest::RunCommandList() {
       D3D12_VIEWPORT viewport;
       D3D12_RECT scissorRect;
 
-      memset(&viewport, 0, sizeof(viewport));
-      viewport.Height = (FLOAT)R->Desc.Height;
-      viewport.Width = (FLOAT)R->Desc.Width;
-      viewport.MaxDepth = 1.0f;
+      viewport = m_pShaderOp->Viewport;
+      if (viewport.Height == 0)
+        viewport.Height = (FLOAT)R->Desc.Height;
+      if (viewport.Width == 0)
+        viewport.Width = (FLOAT)R->Desc.Width;
+
       memset(&scissorRect, 0, sizeof(scissorRect));
       scissorRect.right = (LONG)viewport.Width;
       scissorRect.bottom = (LONG)viewport.Height;
@@ -1022,6 +1024,8 @@ private:
   bool ReadAtElementName(IXmlReader *pReader, LPCWSTR pName);
   HRESULT ReadAttrStr(IXmlReader *pReader, LPCWSTR pAttrName, LPCSTR *ppValue);
   HRESULT ReadAttrBOOL(IXmlReader *pReader, LPCWSTR pAttrName, BOOL *pValue, BOOL defaultValue = FALSE);
+  HRESULT ReadAttrFLOAT(IXmlReader *pReader, LPCWSTR pAttrName, FLOAT *pValue, FLOAT defaultValue);
+  HRESULT ReadAttrINT(IXmlReader *pReader, LPCWSTR pAttrName, INT *pValue, INT defaultValue);
   HRESULT ReadAttrUINT64(IXmlReader *pReader, LPCWSTR pAttrName, UINT64 *pValue, UINT64 defaultValue = 0);
   HRESULT ReadAttrUINT16(IXmlReader *pReader, LPCWSTR pAttrName, UINT16 *pValue, UINT16 defaultValue = 0);
   HRESULT ReadAttrUINT(IXmlReader *pReader, LPCWSTR pAttrName, UINT *pValue, UINT defaultValue = 0);
@@ -1030,11 +1034,13 @@ private:
   void ParseDescriptorHeap(IXmlReader *pReader, ShaderOpDescriptorHeap *pHeap);
   void ParseInputElement(IXmlReader *pReader, D3D12_INPUT_ELEMENT_DESC *pInputElement);
   void ParseInputElements(IXmlReader *pReader, std::vector<D3D12_INPUT_ELEMENT_DESC> *pInputElements);
+  void ParseRasterizer(IXmlReader *pReader, D3D12_RASTERIZER_DESC *pDesc);
   void ParseRenderTargets(IXmlReader *pReader, std::vector<LPCSTR> *pRenderTargets);
   void ParseRootValue(IXmlReader *pReader, ShaderOpRootValue *pRootValue);
   void ParseRootValues(IXmlReader *pReader, std::vector<ShaderOpRootValue> *pRootValues);
   void ParseResource(IXmlReader *pReader, ShaderOpResource *pResource);
   void ParseShader(IXmlReader *pReader, ShaderOpShader *pShader);
+  void ParseViewport(IXmlReader *pReader, D3D12_VIEWPORT *pViewport);
 
 public:
   void ParseShaderOpSet(IStream *pStream, ShaderOpSet *pShaderOpSet);
@@ -1529,6 +1535,34 @@ HRESULT ShaderOpParser::ReadAttrBOOL(IXmlReader *pReader, LPCWSTR pAttrName, BOO
   return S_OK;
 }
 
+HRESULT ShaderOpParser::ReadAttrFLOAT(IXmlReader *pReader, LPCWSTR pAttrName, FLOAT *pValue, FLOAT defaultValue) {
+  if (S_FALSE == CHECK_HR_RET(pReader->MoveToAttributeByName(pAttrName, nullptr))) {
+    *pValue = defaultValue;
+    return S_FALSE;
+  }
+  LPCWSTR pText;
+  CHECK_HR(pReader->GetValue(&pText, nullptr));
+  double d = _wtof(pText);
+  if (errno == ERANGE) CHECK_HR(E_INVALIDARG);
+  *pValue = d;
+  CHECK_HR(pReader->MoveToElement());
+  return S_OK;
+}
+
+HRESULT ShaderOpParser::ReadAttrINT(IXmlReader *pReader, LPCWSTR pAttrName, INT *pValue, INT defaultValue) {
+  if (S_FALSE == CHECK_HR_RET(pReader->MoveToAttributeByName(pAttrName, nullptr))) {
+    *pValue = defaultValue;
+    return S_FALSE;
+  }
+  LPCWSTR pText;
+  CHECK_HR(pReader->GetValue(&pText, nullptr));
+  INT i = _wtoi(pText);
+  if (errno == ERANGE) CHECK_HR(E_INVALIDARG);
+  *pValue = i;
+  CHECK_HR(pReader->MoveToElement());
+  return S_OK;
+}
+
 HRESULT ShaderOpParser::ReadAttrUINT64(IXmlReader *pReader, LPCWSTR pAttrName, UINT64 *pValue, UINT64 defaultValue) {
   if (S_FALSE == CHECK_HR_RET(pReader->MoveToAttributeByName(pAttrName, nullptr))) {
     *pValue = defaultValue;
@@ -1762,6 +1796,22 @@ void ShaderOpParser::ParseInputElements(IXmlReader *pReader, std::vector<D3D12_I
   }
 }
 
+void ShaderOpParser::ParseRasterizer(IXmlReader *pReader, D3D12_RASTERIZER_DESC *pDesc) {
+  if (!ReadAtElementName(pReader, L"Rasterizer"))
+    return;
+  // D3D12_FILL_MODE FillMode;
+  // D3D12_CULL_MODE CullMode;
+  CHECK_HR(ReadAttrBOOL(pReader, L"FrontCounterClockwise", &pDesc->FrontCounterClockwise, pDesc->FrontCounterClockwise));
+  CHECK_HR(ReadAttrINT(pReader, L"DepthBias", &pDesc->DepthBias, pDesc->DepthBias));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"DepthBiasClamp", &pDesc->DepthBiasClamp, pDesc->DepthBiasClamp));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"SlopeScaledDepthBias", &pDesc->SlopeScaledDepthBias, pDesc->SlopeScaledDepthBias));
+  CHECK_HR(ReadAttrBOOL(pReader, L"DepthClipEnable", &pDesc->DepthClipEnable, pDesc->DepthClipEnable));
+  CHECK_HR(ReadAttrBOOL(pReader, L"MultisampleEnable", &pDesc->MultisampleEnable, pDesc->MultisampleEnable));
+  CHECK_HR(ReadAttrBOOL(pReader, L"AntialiasedLineEnable", &pDesc->AntialiasedLineEnable, pDesc->AntialiasedLineEnable));
+  CHECK_HR(ReadAttrUINT(pReader, L"ForcedSampleCount", &pDesc->ForcedSampleCount, pDesc->ForcedSampleCount));
+  // D3D12_CONSERVATIVE_RASTERIZATION_MODE ConservativeRaster;
+}
+
 void ShaderOpParser::ParseRenderTargets(IXmlReader *pReader, std::vector<LPCSTR> *pRenderTargets) {
   if (!ReadAtElementName(pReader, L"RenderTargets"))
     return;
@@ -1887,6 +1937,9 @@ void ShaderOpParser::ParseShaderOp(IXmlReader *pReader, ShaderOp *pShaderOp) {
         ParseShader(pReader, &shader);
         pShaderOp->Shaders.push_back(shader);
       }
+      else if (0 == wcscmp(pLocalName, L"Rasterizer")) {
+        ParseRasterizer(pReader, &pShaderOp->RasterizerDesc);
+      }
       else if (0 == wcscmp(pLocalName, L"RootSignature")) {
         ReadElementContentStr(pReader, &pShaderOp->RootSignature);
       }
@@ -1906,6 +1959,9 @@ void ShaderOpParser::ParseShaderOp(IXmlReader *pReader, ShaderOp *pShaderOp) {
       else if (0 == wcscmp(pLocalName, L"RootValues")) {
         ParseRootValues(pReader, &pShaderOp->RootValues);
       }
+      else if (0 == wcscmp(pLocalName, L"Viewport")) {
+        ParseViewport(pReader, &pShaderOp->Viewport);
+      }
     }
     else if (nt == XmlNodeType_EndElement) {
       UINT depth;
@@ -1917,6 +1973,17 @@ void ShaderOpParser::ParseShaderOp(IXmlReader *pReader, ShaderOp *pShaderOp) {
     if (S_FALSE == CHECK_HR_RET(pReader->Read(&nt)))
       return;
   }
+}
+
+void ShaderOpParser::ParseViewport(IXmlReader *pReader, D3D12_VIEWPORT *pViewport) {
+  if (!ReadAtElementName(pReader, L"Viewport"))
+    return;
+  CHECK_HR(ReadAttrFLOAT(pReader, L"Height", &pViewport->Height, pViewport->Height));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"MaxDepth", &pViewport->MaxDepth, pViewport->MaxDepth));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"MinDepth", &pViewport->MinDepth, pViewport->MinDepth));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"TopLeftX", &pViewport->TopLeftX, pViewport->TopLeftX));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"TopLeftY", &pViewport->TopLeftY, pViewport->TopLeftY));
+  CHECK_HR(ReadAttrFLOAT(pReader, L"Width", &pViewport->Width, pViewport->Width));
 }
 
 LPCWSTR SkipByteInitSeparators(LPCWSTR pText) {
